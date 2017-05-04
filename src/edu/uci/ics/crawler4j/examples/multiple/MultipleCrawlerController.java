@@ -32,7 +32,12 @@ public class MultipleCrawlerController {
 
 	public static void main(String[] args) throws Exception {
 
+		//BFS --> chosen = -1
+		//DFS --> chosen = 0
+		//B-FS --> chosen 1
 		Integer chosen = 1;
+		Integer max = 2;
+
 		/*
 		if (args.length != 1) {
 			System.out.println("Needed parameter: ");
@@ -77,7 +82,7 @@ public class MultipleCrawlerController {
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher1);
 
-		CrawlController controller1 = new CrawlController(config1, pageFetcher1, robotstxtServer, chosen);
+		CrawlController controller1 = new CrawlController(config1, pageFetcher1, robotstxtServer, chosen, max);
 		//CrawlController controller2 = new CrawlController(config2, pageFetcher2, robotstxtServer);
 
 		String[] crawler1Domains = new String[] { "http://www.ics.uci.edu/", "http://www.cnn.com/" };
@@ -99,7 +104,7 @@ public class MultipleCrawlerController {
 		 * The first crawler will have 5 cuncurrent threads and the second
 		 * crawler will have 7 threads.
 		 */
-		controller1.startNonBlocking(BasicCrawler.class, 5);
+		controller1.startNonBlocking(BasicCrawler.class, 1);
 		//controller2.startNonBlocking(BasicCrawler.class, 7);
 
 		controller1.waitUntilFinish();

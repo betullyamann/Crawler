@@ -29,22 +29,22 @@ public class Frontier extends Configurable {
 	
 	protected Counters counters;
 
-	public Frontier(Environment env, CrawlConfig config, DocIDServer docIdServer, Integer chosen) {
+	public Frontier(Environment env, CrawlConfig config, DocIDServer docIdServer, Integer chosen, Integer max) {
 		super(config);
 		this.counters = new Counters(env, config);
 		this.docIdServer = docIdServer;
 		try {
-			workQueues = new WorkQueues(env, "PendingURLsDB", config.isResumableCrawling(), chosen);
+			workQueues = new WorkQueues(env, "PendingURLsDB", config.isResumableCrawling(), chosen, max);
 			if (config.isResumableCrawling()) {
 				scheduledPages = counters.getValue(ReservedCounterNames.SCHEDULED_PAGES);
-				inProcessPages = new InProcessPagesDB(env, chosen);
+				inProcessPages = new InProcessPagesDB(env, chosen, max);
 				long numPreviouslyInProcessPages = inProcessPages.getLength();
 				if (numPreviouslyInProcessPages > 0) {
 					logger.info("Rescheduling " + numPreviouslyInProcessPages + " URLs from previous crawl.");
 					System.out.println("Frontier.java - Frontier (...) - Rescheduling " + numPreviouslyInProcessPages + " URLs from previous crawl.");
 					scheduledPages -= numPreviouslyInProcessPages;
 					while (true) {
-						List<WebURL> urls = inProcessPages.get(100);
+						List<WebURL> urls = inProcessPages.get();
 						if (urls.size() == 0) {
                             break;
                         }
@@ -103,14 +103,14 @@ public class Frontier extends Configurable {
 		}
 	}
 
-	public void getNextURLs(int max, List<WebURL> result) {
+	public void getNextURLs(List<WebURL> result) {
 		while (true) {
 			synchronized (mutex) {
 				if (isFinished) {
 					return;
 				}
 				try {
-					List<WebURL> curResults = workQueues.get(max);
+					List<WebURL> curResults = workQueues.get();
 					workQueues.delete(curResults.size());
 					if (inProcessPages != null) {
 						for (WebURL curPage : curResults) {

@@ -23,8 +23,8 @@ public class InProcessPagesDB extends WorkQueues {
 
 	private static final Logger logger = Logger.getLogger(InProcessPagesDB.class.getName());
 
-	public InProcessPagesDB(Environment env, Integer chosen) throws DatabaseException {
-		super(env, "InProcessPagesDB", true, chosen);
+	public InProcessPagesDB(Environment env, Integer chosen, Integer max) throws DatabaseException {
+		super(env, "InProcessPagesDB", true, chosen, max);
 		long docCount = getLength();
 		if (docCount > 0) {
 			logger.info("Loaded " + docCount + " URLs that have been in process in the previous crawl.");

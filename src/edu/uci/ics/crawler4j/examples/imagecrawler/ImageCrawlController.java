@@ -35,7 +35,13 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 public class ImageCrawlController {
 
 	public static void main(String[] args) throws Exception {
+
+		//BFS --> chosen = -1
+		//DFS --> chosen = 0
+		//B-FS --> chosen 1
 		Integer chosen = 0;
+		Integer max = 5;
+
 		if (args.length < 3) {
 			System.out.println("Needed parameters: ");
 			System.out.println("\t rootFolder (it will contain intermediate crawl data)");
@@ -62,7 +68,7 @@ public class ImageCrawlController {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer, chosen);
+		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer, chosen, max);
 		for (String domain : crawlDomains) {
 			controller.addSeed(domain);
 		}

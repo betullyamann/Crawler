@@ -8,7 +8,7 @@ import edu.uci.ics.crawler4j.url.WebURL;
 public class SortByRelation implements Comparable<SortByRelation>{
 
     private WebURL url;
-    private int distance;
+    private Integer distance;
 
     public SortByRelation(WebURL url, int distance){
         this.url = url;
@@ -32,7 +32,7 @@ public class SortByRelation implements Comparable<SortByRelation>{
     }
 
     @Override
-    public int compareTo(SortByRelation o) {
-        return new Integer(this.getDistance()).compareTo(o.getDistance());
+    public int compareTo(SortByRelation url) {
+        return this.distance.compareTo(url.getDistance());
     }
 }

@@ -30,8 +30,9 @@ public class WorkQueues {
 
     protected Integer chosen;
     protected WebURL url;
+    protected int max;
 
-    public WorkQueues(Environment env, String dbName, boolean resumable, Integer chosen) throws DatabaseException {
+    public WorkQueues(Environment env, String dbName, boolean resumable, Integer chosen, Integer max) throws DatabaseException {
         this.env = env;
         this.resumable = resumable;
         DatabaseConfig dbConfig = new DatabaseConfig();
@@ -41,12 +42,13 @@ public class WorkQueues {
         urlsDB = env.openDatabase(null, dbName, dbConfig);
         webURLBinding = new WebURLTupleBinding();
         this.chosen = chosen;
+        this.max = max;
     }
 
-    public List<WebURL> get(int max) throws DatabaseException {
+    public List<WebURL> get() throws DatabaseException {
         synchronized (mutex) {
             int matches = 0;
-            List<WebURL> results = new ArrayList<WebURL>(max);
+            List<WebURL> results = new ArrayList<WebURL>();
 
             Cursor cursor = null;
             OperationStatus result;
@@ -60,7 +62,7 @@ public class WorkQueues {
             }
 
 			/* BFS */
-            if (chosen == 1) {
+            if (chosen == -1) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getFirst(key, value, null);
@@ -87,8 +89,9 @@ public class WorkQueues {
                     }
                 }
             }
+
             /* DFS */
-            else if (chosen == 2) {
+            else if (chosen == 0) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getLast(key, value, null);
@@ -115,8 +118,9 @@ public class WorkQueues {
             }
 
             /* B-FS */
-            else if (chosen == 3) {
+            else if (chosen == 1) {
                 try {
+                    int count = 0;
                     ArrayList<WebURL> urls = new ArrayList<>();
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getFirst(key, value, null);
@@ -125,26 +129,26 @@ public class WorkQueues {
                     while (result == OperationStatus.SUCCESS) {
                         if (value.getData().length > 0) {
                             urls.add(webURLBinding.entryToObject(value));
+                            count++;
                         }
                         result = cursor.getNext(key, value, null);
                     }
 
-                    /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    * sortla deletein yeri değiştirildi
-                     */
                     //Urls listi relationSort metoduna gönderiliyor.
                     relationSort(urls);
-
-                    delete(urls.size());
 
                     //Sıralı dizinin ilk n -max olarak atandı- değeri results dizisine ekleniyor.
                     for (int i = 0; i < max; i++) {
                         results.add(urls.get(i));
+                        System.out.println("ISLENECEK " + results.get(i).getURL() + "\n");
                     }
 
+                    delete(max-1);
+
                     //İşlenmeyecek elemanlar databasee geri yazılıyor.
-                    for (int i = max; i < urls.size(); i++) {
+                    for(int i = max; i < urls.size(); i++) {
                         put(urls.get(i));
+                        System.out.println("GERİ EKLENDİ " + results.get(i).getURL() + "\n");
                     }
                 } catch (DatabaseException e) {
                     if (txn != null) {
@@ -160,23 +164,18 @@ public class WorkQueues {
                         txn.commit();
                     }
                 }
-
             }
             return results;
-
         }
     }
 
     //URL ve parentURL'inin benzerliğine göre list elemanlarını sıralıyor.
     private void relationSort(ArrayList<WebURL> urls) {
         ArrayList<SortByRelation> relation = new ArrayList<>();
-        int distance = Integer.MAX_VALUE;
+        int distance;
         //calculateRelationWithEditDistance metodu, URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
         for (WebURL url : urls) {
-
-            /* !!!!!!!!!!!!!!!!!!!!!!!
-            * hazır distance methodu varmış org.apache.commons.lang3.stringutils.jar*/
-            distance =  getLevenshteinDistance( url.getURL(), getParentURL(url));
+            distance = getLevenshteinDistance(url.getURL(), getParentURL(url));
             relation.add(new SortByRelation(url, distance));
         }
 
@@ -189,7 +188,6 @@ public class WorkQueues {
             urls.set(i, relation.get(i).getUrl());
         }
     }
-
 
 
     // parentDocid'ye ait parentURL bulunuyor.
@@ -209,10 +207,8 @@ public class WorkQueues {
             cursor = urlsDB.openCursor(txn, null);
             result = cursor.getFirst(key, value, null);
 
-            /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-             * while sonsuz döngüy giriyordu */
             if (result == OperationStatus.SUCCESS && value.getData().length > 0) {
-                    parentURL = webURLBinding.entryToObject(value).getURL();
+                parentURL = webURLBinding.entryToObject(value).getURL();
             }
 
         } catch (DatabaseException e) {
@@ -248,7 +244,7 @@ public class WorkQueues {
             }
 
             /* BFS / B-FS */
-            if (chosen == 1 || chosen == 3) {
+            if (chosen == -1 || chosen == 1) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getFirst(key, value, null);
@@ -275,7 +271,7 @@ public class WorkQueues {
             }
 
             /* DFS */
-            else if (chosen == 2) {
+            else if (chosen == 0) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getLast(key, value, null);
