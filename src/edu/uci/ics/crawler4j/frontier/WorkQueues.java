@@ -4,11 +4,15 @@ import com.sleepycat.je.*;
 import edu.uci.ics.crawler4j.url.WebURL;
 import edu.uci.ics.crawler4j.util.Util;
 
+import javax.xml.bind.SchemaOutputResolver;
 import java.sql.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.apache.commons.lang3.StringUtils.getLevenshteinDistance;
+import static org.apache.commons.lang3.StringUtils.indexOf;
 
 /**
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
@@ -113,10 +117,10 @@ public class WorkQueues {
             /* B-FS */
             else if (chosen == 3) {
                 try {
-
                     ArrayList<WebURL> urls = new ArrayList<>();
                     cursor = urlsDB.openCursor(txn, null);
-                    result = cursor.getCurrent(key, value, null);
+                    result = cursor.getFirst(key, value, null);
+
                     //Databasedeki tüm URL'ler urls listine aktarılıp databaseten siliniyor.
                     while (result == OperationStatus.SUCCESS) {
                         if (value.getData().length > 0) {
@@ -124,19 +128,23 @@ public class WorkQueues {
                         }
                         result = cursor.getNext(key, value, null);
                     }
-                    delete(urls.size());
 
+                    /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    * sortla deletein yeri değiştirildi
+                     */
                     //Urls listi relationSort metoduna gönderiliyor.
                     relationSort(urls);
+
+                    delete(urls.size());
 
                     //Sıralı dizinin ilk n -max olarak atandı- değeri results dizisine ekleniyor.
                     for (int i = 0; i < max; i++) {
                         results.add(urls.get(i));
                     }
 
-                    //İşlenmek üzere belirlenen sıralı n tane değer databasee geri yazılıyor.
-                    for (int i = 0; i < max; i++) {
-                        put(results.get(i));
+                    //İşlenmeyecek elemanlar databasee geri yazılıyor.
+                    for (int i = max; i < urls.size(); i++) {
+                        put(urls.get(i));
                     }
                 } catch (DatabaseException e) {
                     if (txn != null) {
@@ -161,49 +169,33 @@ public class WorkQueues {
 
     //URL ve parentURL'inin benzerliğine göre list elemanlarını sıralıyor.
     private void relationSort(ArrayList<WebURL> urls) {
+        System.out.println(" relationSort giris\n");
         ArrayList<SortByRelation> relation = new ArrayList<>();
         int distance = Integer.MAX_VALUE;
         //calculateRelationWithEditDistance metodu, URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
         for (WebURL url : urls) {
-            distance = calculateRelationWithEditDistance(url, getParentURL(url));
+
+            /* !!!!!!!!!!!!!!!!!!!!!!!
+            * hazır distance methodu varmış org.apache.commons.lang3.stringutils.jar*/
+            distance =  getLevenshteinDistance( url.getURL(), getParentURL(url));
             relation.add(new SortByRelation(url, distance));
         }
 
-        //calculateRelationWithEditDistance metodundan dönen distance değerlerine göre relation dizisi sıralanıyor.
+        //Distance değerlerine göre relation dizisi sıralanıyor.
         Collections.sort(relation);
 
         //urls dizisine sıralanmış dizi yazılıyor.
         for (int i = 0; i < urls.size(); i++) {
             urls.set(i, relation.get(i).getUrl());
         }
+        System.out.println(" relationSort cıkıs\n");
     }
 
-    //URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
-    private int calculateRelationWithEditDistance(WebURL url, String parentURL) {
-
-        int len1 = url.getURL().length() + 1; // Matris satir sayısı
-        int len2 = parentURL.length() + 1; // Matris sütun sayısı
-        Integer[][] matrix = new Integer[len1][len2];
-
-        for (int i = 0; i < len1; i++) {
-            matrix[i][0] = 2 * i;
-        }
-
-        for (int i = 0; i < len1; i++) {
-            matrix[0][i] = 2 * i;
-        }
-
-        for (int i = 1; i < len1; i++) {
-            for (int j = 1; j < len2; j++) {
-                matrix[i][j] = Math.min((Math.min(matrix[i - 1][j], matrix[i][j - 1]) + 2), (matrix[i - 1][j - 1] + (url.getURL().charAt(i - 1) != parentURL.charAt(j - 1) ? 1 : 0)));
-            }
-        }
-        return matrix[len1 - 1][len2 - 1];
-    }
 
 
     // parentDocid'ye ait parentURL bulunuyor.
     private String getParentURL(WebURL webURL) {
+        System.out.println("getParentURl\n");
         Cursor cursor = null;
         OperationStatus result;
         DatabaseEntry key = new DatabaseEntry(new byte[]{0, 0, 0, (byte) webURL.getParentDocid()}, 0, 4);
@@ -219,9 +211,12 @@ public class WorkQueues {
             cursor = urlsDB.openCursor(txn, null);
             result = cursor.getFirst(key, value, null);
 
-            if (result == OperationStatus.SUCCESS && value.getSize() > 0) {
-                parentURL = webURLBinding.entryToObject(value).getURL();
+            /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+             * while sonsuz döngüy giriyordu */
+            if (result == OperationStatus.SUCCESS && value.getData().length > 0) {
+                    parentURL = webURLBinding.entryToObject(value).getURL();
             }
+
         } catch (DatabaseException e) {
             if (txn != null) {
                 txn.abort();
@@ -254,7 +249,7 @@ public class WorkQueues {
                 txn = null;
             }
 
-            /* BFS */
+            /* BFS / B-FS */
             if (chosen == 1 || chosen == 3) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
