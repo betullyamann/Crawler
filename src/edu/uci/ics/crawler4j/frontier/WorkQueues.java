@@ -169,7 +169,6 @@ public class WorkQueues {
 
     //URL ve parentURL'inin benzerliğine göre list elemanlarını sıralıyor.
     private void relationSort(ArrayList<WebURL> urls) {
-        System.out.println(" relationSort giris\n");
         ArrayList<SortByRelation> relation = new ArrayList<>();
         int distance = Integer.MAX_VALUE;
         //calculateRelationWithEditDistance metodu, URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
@@ -181,6 +180,7 @@ public class WorkQueues {
             relation.add(new SortByRelation(url, distance));
         }
 
+
         //Distance değerlerine göre relation dizisi sıralanıyor.
         Collections.sort(relation);
 
@@ -188,14 +188,12 @@ public class WorkQueues {
         for (int i = 0; i < urls.size(); i++) {
             urls.set(i, relation.get(i).getUrl());
         }
-        System.out.println(" relationSort cıkıs\n");
     }
 
 
 
     // parentDocid'ye ait parentURL bulunuyor.
     private String getParentURL(WebURL webURL) {
-        System.out.println("getParentURl\n");
         Cursor cursor = null;
         OperationStatus result;
         DatabaseEntry key = new DatabaseEntry(new byte[]{0, 0, 0, (byte) webURL.getParentDocid()}, 0, 4);
