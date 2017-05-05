@@ -6,10 +6,7 @@ import edu.uci.ics.crawler4j.util.Util;
 
 import javax.xml.bind.SchemaOutputResolver;
 import java.sql.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.getLevenshteinDistance;
 import static org.apache.commons.lang3.StringUtils.indexOf;
@@ -30,9 +27,9 @@ public class WorkQueues {
 
     protected Integer chosen;
     protected WebURL url;
-    protected int max;
+    protected int bestN;
 
-    public WorkQueues(Environment env, String dbName, boolean resumable, Integer chosen, Integer max) throws DatabaseException {
+    public WorkQueues(Environment env, String dbName, boolean resumable, Integer chosen, Integer bestN) throws DatabaseException {
         this.env = env;
         this.resumable = resumable;
         DatabaseConfig dbConfig = new DatabaseConfig();
@@ -42,7 +39,7 @@ public class WorkQueues {
         urlsDB = env.openDatabase(null, dbName, dbConfig);
         webURLBinding = new WebURLTupleBinding();
         this.chosen = chosen;
-        this.max = max;
+        this.bestN = bestN;
     }
 
     public List<WebURL> get() throws DatabaseException {
@@ -65,15 +62,15 @@ public class WorkQueues {
             if (chosen == -1) {
                 try {
                     cursor = urlsDB.openCursor(txn, null);
+                    //BFS algoritması, FIFO mantığıyla çalıştığından getFirst() metodu kullanılmıştır.
                     result = cursor.getFirst(key, value, null);
 
-                    while (matches < max && result == OperationStatus.SUCCESS) {
-                        if (value.getData().length > 0) {
+                        //Tek threadle çalışıldığından while kaldırılmıştır.
+                        //sadece queuenun ilk verisi alınmaktadır.
+                        if (value.getData().length > 0 && result == OperationStatus.SUCCESS) {
                             results.add(webURLBinding.entryToObject(value));
-                            matches++;
                         }
-                        result = cursor.getNext(key, value, null);
-                    }
+
                 } catch (DatabaseException e) {
                     if (txn != null) {
                         txn.abort();
@@ -120,16 +117,14 @@ public class WorkQueues {
             /* B-FS */
             else if (chosen == 1) {
                 try {
-                    int count = 0;
-                    ArrayList<WebURL> urls = new ArrayList<>();
+                    LinkedList<WebURL> urls = new LinkedList<>();
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getFirst(key, value, null);
 
-                    //Databasedeki tüm URL'ler urls listine aktarılıp databaseten siliniyor.
+                    //Databasedeki tüm URL'ler urls listine aktarılıyor.
                     while (result == OperationStatus.SUCCESS) {
                         if (value.getData().length > 0) {
                             urls.add(webURLBinding.entryToObject(value));
-                            count++;
                         }
                         result = cursor.getNext(key, value, null);
                     }
@@ -137,19 +132,21 @@ public class WorkQueues {
                     //Urls listi relationSort metoduna gönderiliyor.
                     relationSort(urls);
 
-                    //Sıralı dizinin ilk n -max olarak atandı- değeri results dizisine ekleniyor.
-                    for (int i = 0; i < max; i++) {
-                        results.add(urls.get(i));
-                        System.out.println("ISLENECEK " + results.get(i).getURL() + "\n");
+                    //Sıralı dizinin ilk n -max- değeri results dizisine ekleniyor ve eklenen elemanlar urls dizisinden siliniyor.
+                    int i = 0;
+                    while (i < bestN && i < urls.size()) {
+                        results.add(urls.removeFirst());
+                        i++;
                     }
 
-                    delete(max-1);
+                    //Database, kullanılmayan urlleri koymak için temizleniyor
+                    delete(urls.size());
 
                     //İşlenmeyecek elemanlar databasee geri yazılıyor.
-                    for(int i = max; i < urls.size(); i++) {
+                    for(i = 0; i < urls.size(); i++) {
                         put(urls.get(i));
-                        System.out.println("GERİ EKLENDİ " + results.get(i).getURL() + "\n");
                     }
+
                 } catch (DatabaseException e) {
                     if (txn != null) {
                         txn.abort();
@@ -170,10 +167,10 @@ public class WorkQueues {
     }
 
     //URL ve parentURL'inin benzerliğine göre list elemanlarını sıralıyor.
-    private void relationSort(ArrayList<WebURL> urls) {
+    private void relationSort(LinkedList<WebURL> urls) {
         ArrayList<SortByRelation> relation = new ArrayList<>();
         int distance;
-        //calculateRelationWithEditDistance metodu, URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
+        //getLevenshteinDistance metodu, URL ve parentURL'inin benzerliğini Edit Distance yöntemiyle hesaplıyor.
         for (WebURL url : urls) {
             distance = getLevenshteinDistance(url.getURL(), getParentURL(url));
             relation.add(new SortByRelation(url, distance));
@@ -276,7 +273,7 @@ public class WorkQueues {
                     cursor = urlsDB.openCursor(txn, null);
                     result = cursor.getLast(key, value, null);
 
-                    //Elde edilen yeni değerler list sonuna eklendiği için DFS algoritamsında elemanlar tek tek ele alınıyor.
+                    //Elde edilen yeni değerler list sonuna eklendiği için DFS algoritmasında elemanlar tek tek ele alınıyor.
                     //Listin sonundaki değer siliniyor.
                     if (result == OperationStatus.SUCCESS && value.getData().length > 0) {
                         cursor.delete();

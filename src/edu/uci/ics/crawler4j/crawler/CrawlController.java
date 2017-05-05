@@ -57,7 +57,7 @@ public class CrawlController extends Configurable {
 
 	protected final Object waitingLock = new Object();
 
-	public CrawlController(CrawlConfig config, PageFetcher pageFetcher, RobotstxtServer robotstxtServer, Integer chosen, Integer max)
+	public CrawlController(CrawlConfig config, PageFetcher pageFetcher, RobotstxtServer robotstxtServer, Integer chosen, Integer bestN)
 			throws Exception {
 		super(config);
 
@@ -88,7 +88,7 @@ public class CrawlController extends Configurable {
 
 		Environment env = new Environment(envHome, envConfig);
 		docIdServer = new DocIDServer(env, config);
-		frontier = new Frontier(env, config, docIdServer, chosen, max);
+		frontier = new Frontier(env, config, docIdServer, chosen, bestN);
 
 		this.pageFetcher = pageFetcher;
 		this.robotstxtServer = robotstxtServer;

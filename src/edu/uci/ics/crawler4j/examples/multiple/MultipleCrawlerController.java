@@ -36,7 +36,7 @@ public class MultipleCrawlerController {
 		//DFS --> chosen = 0
 		//B-FS --> chosen 1
 		Integer chosen = 1;
-		Integer max = 2;
+		Integer bestN= 5;
 
 		/*
 		if (args.length != 1) {
@@ -62,13 +62,9 @@ public class MultipleCrawlerController {
 		 * intermediate data
 		 */
 		config1.setCrawlStorageFolder("C:\\crawler1");
-		//config2.setCrawlStorageFolder(crawlStorageFolder + "/crawler2");
-
 		config1.setPolitenessDelay(1000);
-		//config2.setPolitenessDelay(2000);
-
-		config1.setMaxPagesToFetch(50);
-		//config2.setMaxPagesToFetch(100);
+		config1.setMaxPagesToFetch(1500);
+		config1.setMaxDepthOfCrawling(5);
 
 		/*
 		 * We will use different PageFetchers for the two crawlers.
@@ -82,7 +78,7 @@ public class MultipleCrawlerController {
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher1);
 
-		CrawlController controller1 = new CrawlController(config1, pageFetcher1, robotstxtServer, chosen, max);
+		CrawlController controller1 = new CrawlController(config1, pageFetcher1, robotstxtServer, chosen, bestN);
 		//CrawlController controller2 = new CrawlController(config2, pageFetcher2, robotstxtServer);
 
 		String[] crawler1Domains = new String[] { "http://www.ics.uci.edu/", "http://www.cnn.com/" };
@@ -95,6 +91,19 @@ public class MultipleCrawlerController {
 		controller1.addSeed("http://www.cnn.com/");
 		controller1.addSeed("http://www.ics.uci.edu/~yganjisa/");
 		controller1.addSeed("http://www.cnn.com/POLITICS/");
+//		controller1.addSeed("http://edition.cnn.com/US/OJ/");
+//		controller1.addSeed("http://edition.cnn.com/EVENTS/1996/year.in.review/");
+//		controller1.addSeed("http://www.mcspotlight.org/index.shtml");
+//		controller1.addSeed("http://travelassist.com/mag/mag_home.html");
+//		controller1.addSeed("http://www.excite.com/");
+//		controller1.addSeed("http://www.instanet.com/");
+//		controller1.addSeed("http://www.rdrop.com/");
+//		controller1.addSeed("http://www.kli.org/");
+//		controller1.addSeed("http://www.dolekemp96.org/");
+//		controller1.addSeed("http://www.aliweb.com/");
+//		controller1.addSeed("http://www.taco.com/");
+//		controller1.addSeed("http://www.enterweb.org/");
+//		controller1.addSeed("http://www.ifindit.com/");
 
 		//controller2.addSeed("http://en.wikipedia.org/wiki/Main_Page");
 		//controller2.addSeed("http://en.wikipedia.org/wiki/Obama");

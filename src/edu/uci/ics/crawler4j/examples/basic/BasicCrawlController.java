@@ -14,7 +14,7 @@ public class BasicCrawlController {
 		//DFS --> chosen = 0
 		//B-FS --> chosen 1
 		Integer chosen = 1;
-		Integer max = 5;
+		Integer max = -1;
 
 //		if (args.length != 2) {
 //			System.out.println("Needed parameters: ");
